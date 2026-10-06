@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor · one-synthesizer</title>
+<meta name="description" content="A desktop editor and librarian for the Moog One parameter surface. Work in progress.">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="diagrams.js"></script>
+</head>
+<body>
+<header>
+  <div class="name">one-synthesizer</div>
+  <nav>
+    <a href="index.html">Overview</a>
+    <a href="signal-flow.html">Signal flow</a>
+    <a href="protocol.html">Protocol</a>
+    <a href="editor.html" aria-current="page">Editor</a>
+    <a href="https://github.com/pnomolos/one-synthesizer">GitHub</a>
+  </nav>
+</header>
+<main>
+  <h1>Editor and librarian</h1>
+  <p class="lede">A desktop application that edits the instrument's patch parameters over the same
+  binary parameter plane the built-in UI uses. In progress; not yet released.</p>
+
+  <figure class="shot">
+    <img src="img/editor-oscillators.png" width="2000" height="1414"
+         alt="Editor showing the Oscillators section: rows of knobs, segmented selectors and toggles for oscillators 1 to 3, each labelled with its parameter name and tree path, some showing live values and a not-equal marker.">
+    <figcaption>The Oscillators section in a live session. Every control is generated from the
+    parameter model; the small text under each name is its path in the parameter tree. Values
+    appear where the editor knows them, and the &ne; badge marks controls whose local value
+    differs from the instrument's.</figcaption>
+  </figure>
+
+  <h2>What it does</h2>
+  <ul>
+    <li><strong>Full parameter surface.</strong> 265 parameters per timbre across oscillators,
+    mixer and noise, filters, envelopes, LFOs, sequencer, voice and glide, timbre MIDI and global
+    settings. The mod matrix and effects are not modelled yet.</li>
+    <li><strong>Three timbres.</strong> The Synth 1/2/3 tabs rebind the whole surface; a parameter's
+    wire id is its base id plus a fixed per-timbre offset.</li>
+    <li><strong>Arm gate.</strong> Nothing reaches the instrument until the session is connected
+    and armed. Disarmed edits stay in the local patch document.</li>
+    <li><strong>Batched push.</strong> "Push all dirty" and "Push whole patch" pack records into
+    blobs no larger than the instrument's own frontend sends.</li>
+    <li><strong>Readback that never writes back.</strong> Changes made on the instrument's panel
+    are observed and adopted into the editor without being echoed to the instrument.</li>
+    <li><strong>Librarian.</strong> Capture a preset as it loads on the instrument, save it to a
+    file, diff two patches.</li>
+  </ul>
+
+  <h2>Reading a control</h2>
+  <p>Each control carries two small markers showing how much is known about it:</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Marker</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Tier dot</td><td>How well the parameter's id and value mapping are established:
+      value-proven (solid), order-proven (half), order-only (hollow).</td></tr>
+      <tr><td>Provenance dot</td><td>Where the displayed value came from: unknown, the panel, a
+      preset, sent by the editor, or confirmed by readback.</td></tr>
+      <tr><td><code>HW</code> badge</td><td>The id has been verified on hardware.</td></tr>
+      <tr><td>Dirty marker</td><td>The local value differs from what the instrument is believed
+      to hold.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The kind of control follows the parameter's type: continuous values get a knob (cutoffs get
+  a full-width slider), small enumerations get segmented buttons, booleans get a toggle. A
+  continuous parameter whose range is not yet known is shown read-only and cannot be sent.</p>
+
+  <h2>How it reaches the instrument</h2>
+  <figure class="diagram">
+  <pre class="mermaid" data-layout="elk">
+flowchart LR
+  ED["Editor<br/>desktop"]
+  subgraph BOX["Instrument"]
+    RL["Relay<br/>whitelist + tap"]
+    VC["Voice controller<br/>UDP 7770"]
+    FE["Built-in frontend"]
+  end
+  ED -->|"/x ,b records over LAN"| RL
+  RL -->|"validated records"| VC
+  FE -->|"/x ,b records"| VC
+  RL -.->|"mirrored frames"| ED
+  FE -.->|"sniffed"| RL
+  </pre>
+  <figcaption>The voice controller is only reachable on the instrument's internal link, so a small
+  relay runs on the instrument. It forwards only well-formed parameter records whose ids and types
+  are in a generated whitelist, and mirrors the built-in frontend's traffic back for readback.</figcaption>
+  </figure>
+  <p>The relay runs from temporary storage and installs nothing. It can be restricted to datagrams from one
+  configured source address.</p>
+
+  <h2>State</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Area</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td>Parameter model, record encoding</td><td><span class="tag ok">DONE</span> tested against captured traffic</td></tr>
+      <tr><td>Editable surface, arm gate, batched push</td><td><span class="tag ok">DONE</span> against a mock voice controller</td></tr>
+      <tr><td>All wire types on real hardware</td><td><span class="tag wip">PENDING</span></td></tr>
+      <tr><td>Safe automation rate</td><td><span class="tag wip">PENDING</span> default held at 50 Hz until measured</td></tr>
+      <tr><td>Mod matrix, effects</td><td><span class="tag no">NOT MODELLED</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</main>
+<footer>
+  Independent project. Not affiliated with, endorsed by, or supported by Moog Music. "Moog" and
+  "Moog One" are trademarks of their owner, used here only to identify the instrument.
+</footer>
+</body>
+</html>

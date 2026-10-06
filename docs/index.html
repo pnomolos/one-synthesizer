@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>one-synthesizer</title>
+<meta name="description" content="Interoperability notes for the Moog One: MPE input, internal MIDI/OSC signal flow, and an external editor. Work in progress.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="name">one-synthesizer</div>
+  <nav>
+    <a href="index.html" aria-current="page">Overview</a>
+    <a href="signal-flow.html">Signal flow</a>
+    <a href="protocol.html">Protocol</a>
+    <a href="editor.html">Editor</a>
+    <a href="https://github.com/pnomolos/one-synthesizer">GitHub</a>
+  </nav>
+</header>
+<main>
+  <h1>MPE and external control for the Moog One</h1>
+  <p class="lede">Working notes from an interoperability project: getting an MPE controller to play a
+  Moog One with per-note pitch, pressure and timbre, and driving its parameter tree from a computer.</p>
+
+  <p>The instrument is internally a small network. An ARM Linux module runs the UI; an XMOS
+  microcontroller (the <em>voice controller</em>) receives MIDI, allocates voices and talks to the
+  analog voice cards. The three speak OSC to each other over UDP and an internal link. Almost
+  everything here follows from mapping that traffic.</p>
+
+  <ul>
+    <li><a href="signal-flow.html">Signal flow</a>: how a note gets from a key or a MIDI port to a
+    voice card, where the built-in keyboard and an external controller take different paths, and
+    how per-note MPE fits in.</li>
+    <li><a href="protocol.html">Protocol</a>: ports, the MIDI-in-OSC encoding, the binary
+    parameter record format, and reply semantics.</li>
+    <li><a href="editor.html">Editor</a>: a desktop editor and librarian for the parameter
+    surface, in progress.</li>
+  </ul>
+
+  <h2>Status</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Track</th><th>What it does</th><th>State</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Per-note MPE</td>
+        <td>Voice-controller change so pitch bend, pressure and slide follow each note's origin
+        MIDI channel instead of its timbre, at full polyphony. The voice cards are untouched; they
+        already parse the per-voice messages this relies on.</td>
+        <td><span class="tag ok">WORKING</span><br>all three axes verified on hardware; one
+        unit, one firmware version</td>
+      </tr>
+      <tr>
+        <td>Editor / librarian</td>
+        <td>Desktop editor for the full parameter surface (265 parameters per timbre) over the
+        binary parameter plane, with a small on-device UDP relay and whitelist.</td>
+        <td><span class="tag wip">IN PROGRESS</span><br>software complete against a mock;
+        hardware validation pending</td>
+      </tr>
+      <tr>
+        <td>Protocol documentation</td>
+        <td>Port map, message schemas, parameter id table.</td>
+        <td><span class="tag wip">PARTIAL</span><br>panel plane undecoded</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>What is published here</h2>
+  <p>Documentation of observed behaviour and interfaces, plus diagrams. Original source code will
+  follow per track as it is cleaned up.</p>
+  <p>Not published, and not going to be: Moog firmware, in original or modified form, or
+  disassembly and string dumps of it. Anything that eventually ships for the per-note MPE track will
+  be a patch that operates on an image you extract from your own instrument.</p>
+
+  <div class="note">
+    <strong>Risk.</strong> Everything here that sends OSC to the voice controller or modifies it
+    can leave the instrument unresponsive. The controller has no read verb on its
+    parameter port (every argument is a write), and one stray message to a mode address hung it
+    hard enough to need a physical power cycle. Treat the protocol notes as a map, not an
+    invitation.
+  </div>
+
+  <h2>Tested configuration</h2>
+  <p>One instrument: system firmware 1.5.0, voice controller 2.1.2, voice cards 2.1.0. Nothing
+  here is known to hold on other versions.</p>
+</main>
+<footer>
+  Independent project. Not affiliated with, endorsed by, or supported by Moog Music. "Moog" and
+  "Moog One" are trademarks of their owner, used here only to identify the instrument. No warranty;
+  you can damage your instrument.
+</footer>
+</body>
+</html>

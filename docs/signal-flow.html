@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal flow · one-synthesizer</title>
+<meta name="description" content="How MIDI becomes OSC inside the Moog One, and how the built-in keyboard path differs from an external controller.">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="diagrams.js"></script>
+</head>
+<body>
+<header>
+  <div class="name">one-synthesizer</div>
+  <nav>
+    <a href="index.html">Overview</a>
+    <a href="signal-flow.html" aria-current="page">Signal flow</a>
+    <a href="protocol.html">Protocol</a>
+    <a href="editor.html">Editor</a>
+    <a href="https://github.com/pnomolos/one-synthesizer">GitHub</a>
+  </nav>
+</header>
+<main>
+  <h1>Signal flow: MIDI in, OSC out</h1>
+  <p class="lede">A note never passes through the Linux UI on its way to a voice. The XMOS voice
+  controller takes MIDI in, decides which voices play, and emits OSC to the voice cards.</p>
+  <p>Sections 1 to 5 describe the instrument as shipped. Section 6 is the modification this
+  project makes to get per-note MPE. Each diagram can be read at three levels: simplified, for
+  anyone who knows MIDI; intermediate, showing the stages; and detailed, showing every step and
+  message.</p>
+
+  <h2>1. The whole path</h2>
+  <figure class="diagram">
+  <pre class="mermaid" data-level="simple">
+flowchart TB
+  CTRL(["MIDI controller<br/>USB or DIN"])
+  KEYS(["Built-in keyboard,<br/>wheels and pad"])
+  SEQ(["Sequencer and<br/>arpeggiator"])
+  BRAIN["Voice controller<br/>decides which Synth plays each note<br/>and which voice sounds it"]
+  VOICES[["Analog voices"]]
+  CTRL -->|"notes on a MIDI channel"| BRAIN
+  KEYS -->|"notes with no channel"| BRAIN
+  SEQ -->|"notes on a MIDI channel"| BRAIN
+  BRAIN -->|"start and stop each voice"| VOICES
+  BRAIN -->|"bend, aftertouch and pad,<br/>one value per Synth"| VOICES
+  </pre>
+  <pre class="mermaid" data-collapse="ING ROUTE OUT FE" data-layout="elk">
+flowchart TB
+  CTRL(["External controller<br/>USB-MIDI / DIN"])
+  KEYS(["Built-in keybed,<br/>wheels, XY pad"])
+  subgraph FE["Linux frontend"]
+    UI["UI and presets"]
+    SEQ["Sequencer / arp"]
+  end
+  subgraph VC["XMOS voice controller"]
+    subgraph ING["Ingress"]
+      RX["MIDI receive"]
+      SCAN["Panel scan"]
+      PERF["Performance port<br/>UDP 7771"]
+      PARAM["Parameter port<br/>UDP 7770"]
+    end
+    subgraph ROUTE["Routing"]
+      R{"Router"}
+      TF["Timbre filters x3<br/>channel, note range"]
+      LF["Local filter x3<br/>note range, mask cache"]
+    end
+    subgraph OUT["Voices"]
+      AL["Voice allocator<br/>per timbre"]
+      GX["Timbre expression"]
+      EM["OSC emitter"]
+    end
+  end
+  CARDS[["Voice cards<br/>2 voices each"]]
+
+  CTRL -->|"MIDI, channel 0-15"| RX
+  KEYS -->|"key and control state"| SCAN
+  SEQ -->|"/r/sq/0/midi-arp ,iii"| PERF
+  UI -->|"/x ,b parameter records"| PARAM
+  RX -->|"MIDI event"| R
+  PERF -->|"sequencer event"| R
+  SCAN -->|"local event, channel = -1"| LF
+  R -->|"offered to each timbre"| TF
+  TF -->|"notes"| AL
+  LF -->|"local notes"| AL
+  TF -->|"bend, pressure, CC"| GX
+  LF -->|"wheels, pad, aftertouch"| GX
+  PARAM -->|"patch values"| EM
+  AL -->|"voice assignments"| EM
+  GX -->|"one value per timbre"| EM
+  EM -->|"/vN/n /vN/nw /vN/p<br/>per voice"| CARDS
+  EM -->|"/m/pw /m/a /m/xyz<br/>per timbre"| CARDS
+  EM -.->|"note echo, UDP 7772"| UI
+  </pre>
+  <figcaption>Three sources of notes converge on the voice controller. Only the frontend's own
+  sequencer and arp use the OSC performance port; physical MIDI and the built-in keybed never do.</figcaption>
+  </figure>
+  <p>The frontend and the voice controller share an internal USB-Ethernet link. The rear Ethernet
+  jack is also routed through the voice controller, so a hung controller takes the whole box off
+  the network.</p>
+
+  <h2>2. External controller</h2>
+  <p>USB and DIN MIDI terminate on the voice controller. Each message becomes an internal event
+  carrying its type, input port, <strong>MIDI channel</strong>, note, raw 14-bit data and velocity.
+  The router offers the event to each of the three timbres; a timbre accepts it if it passes that
+  timbre's filter for that input port. Matching is independent per timbre, so two timbres on the
+  same channel layer.</p>
+  <figure class="diagram">
+  <pre class="mermaid" data-level="simple">
+flowchart TB
+  NOTE(["Note on MIDI channel 2"])
+  ASK{"Which Synths<br/>listen on channel 2?"}
+  S1["Synth 1<br/>takes a free voice"]
+  S2["Synth 2<br/>takes a free voice"]
+  S3["Synth 3"]
+  BEND(["Pitch bend or aftertouch<br/>on channel 2"])
+  V[["Voices"]]
+  NOTE --> ASK
+  ASK -->|"set to channel 2"| S1
+  ASK -->|"also set to channel 2"| S2
+  ASK -.->|"set to channel 5, ignores it"| S3
+  S1 -->|"one voice per note"| V
+  S2 -->|"one voice per note"| V
+  BEND -->|"moves every note<br/>Synth 1 and 2 are holding"| V
+  </pre>
+  <pre class="mermaid" data-collapse="T1 T2 T3" data-layout="elk">
+flowchart TB
+  IN(["MIDI in<br/>status | channel, d1, d2"])
+  EV["Event<br/>type, port, channel,<br/>note, raw14, velocity"]
+  R{"Router"}
+  subgraph T1["Timbre 1"]
+    F1["Filter<br/>channel + note range"]
+    A1["Allocator"]
+    G1["Expression"]
+  end
+  subgraph T2["Timbre 2"]
+    F2["Filter"]
+    A2["Allocator"]
+    G2["Expression"]
+  end
+  subgraph T3["Timbre 3"]
+    F3["Filter"]
+    A3["Allocator"]
+    G3["Expression"]
+  end
+  CARD[["Voice cards"]]
+
+  IN -->|"parse"| EV
+  EV --> R
+  R -->|"offer"| F1
+  R -->|"offer"| F2
+  R -->|"offer"| F3
+  F1 -->|"note"| A1
+  F1 -->|"bend, pressure, CC"| G1
+  F2 -->|"note"| A2
+  F2 -->|"bend, pressure, CC"| G2
+  F3 -->|"note"| A3
+  F3 -->|"bend, pressure, CC"| G3
+  A1 -->|"/vN/n /vN/nw /vN/p"| CARD
+  A2 -->|"/vN/n /vN/nw /vN/p"| CARD
+  A3 -->|"/vN/n /vN/nw /vN/p"| CARD
+  G1 -->|"/m/pw /m/a /m/xyz"| CARD
+  G2 -->|"/m/pw /m/a /m/xyz"| CARD
+  G3 -->|"/m/pw /m/a /m/xyz"| CARD
+  </pre>
+  <figcaption>The channel selects timbres and is then discarded. Notes go out per voice; bend,
+  pressure and pad go out once per timbre and reach every voice that timbre owns.</figcaption>
+  </figure>
+  <p>A voice <code>v</code> lives on card <code>v / 2</code>, slot <code>1 + v mod 2</code>, which
+  is why card addresses are only ever <code>/v1</code> or <code>/v2</code>.</p>
+  <p>The frontend sees none of this directly. It learns which notes are sounding from the echo the
+  controller sends back on UDP 7772.</p>
+
+  <h2>3. Built-in keyboard</h2>
+  <p>The keybed and the left-hand controls are not MIDI and do not arrive over the OSC performance
+  port. They enter the voice controller as local events with <strong>no channel</strong> (the
+  channel field is −1).</p>
+  <figure class="diagram">
+  <pre class="mermaid" data-level="simple">
+flowchart TB
+  KEY(["Key pressed"])
+  ASK{"Which Synths cover<br/>this key?"}
+  S1["Synth 1<br/>lower split"]
+  S2["Synth 2<br/>upper split"]
+  WH(["Wheel, pad or aftertouch"])
+  V[["Voices"]]
+  KEY --> ASK
+  ASK -->|"key is in its range"| S1
+  ASK -.->|"key is outside its range"| S2
+  S1 -->|"one voice per note"| V
+  WH -->|"moves every held note"| V
+  </pre>
+  <pre class="mermaid" data-collapse="ON OFF EXPR">
+flowchart TB
+  subgraph ON["Key down"]
+    KD(["Key down"])
+    LEV["Local event<br/>channel = -1"]
+    LF["Inline filter per timbre<br/>local note range"]
+    MASK["Cache routing mask<br/>for this key"]
+    AL["Allocator(s)"]
+  end
+  subgraph OFF["Key up"]
+    KU(["Key up"])
+    RM["Read cached mask"]
+    REL["Release the same timbres"]
+  end
+  subgraph EXPR["Wheels, XY pad, aftertouch"]
+    PAD(["Control moved"])
+    GRP["Timbre expression"]
+  end
+  CARD[["Voice cards"]]
+
+  KD --> LEV
+  LEV --> LF
+  LF -->|"timbres that matched"| MASK
+  MASK --> AL
+  KU --> RM
+  RM --> REL
+  PAD --> GRP
+  MASK -.->|"same mask"| RM
+  AL -->|"/vN/n"| CARD
+  REL -->|"/vN/nw"| CARD
+  GRP -->|"/m/pw /m/a /m/xyz"| CARD
+  </pre>
+  <figcaption>The timbres a key triggered are remembered per key, so the release goes to the same
+  timbres even if a split point moved while the key was held.</figcaption>
+  </figure>
+
+  <h2>4. The two paths compared</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th></th><th>External controller</th><th>Built-in keyboard</th></tr></thead>
+    <tbody>
+      <tr><td>Enters at</td><td>MIDI receive (USB / DIN)</td><td>Panel scan, binary panel plane</td></tr>
+      <tr><td>Channel</td><td>0–15 from the status byte</td><td>None (−1)</td></tr>
+      <tr><td>Timbre selection</td><td>Shared router; per-timbre MIDI channel and note range</td><td>Its own inline filter; local note range (splits, layers)</td></tr>
+      <tr><td>Note-off routing</td><td>Not yet characterised</td><td>Mask cached at note-on</td></tr>
+      <tr><td>Visible on UDP 7771</td><td>No</td><td>No</td></tr>
+      <tr><td>Expression</td><td>Per timbre</td><td>Per timbre, global to the instrument</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Open question.</strong> The panel plane (UDP 9100/9876 towards the controller, 9500/9600
+    back) carries ~1 kB binary frames and is not decoded. Captures show it busy whenever keys or
+    the pad move and show nothing on 7771, which establishes that local input bypasses the OSC
+    performance port. Which direction carries the control data versus the display updates is not
+    yet pinned down.
+  </div>
+
+  <h2>5. The frontend's own notes</h2>
+  <p>The sequencer and arpeggiator live in the Linux frontend, so their notes do cross the
+  performance port, as raw MIDI bytes wrapped in OSC:</p>
+  <pre><code>/r/sq/0/midi-arp ,iii 144 60 100     note-on, channel 1, note 60, velocity 100</code></pre>
+  <p>The same triple is accepted on several router addresses (<code>/r/midi</code>,
+  <code>/r/midi-force</code>, per-timbre <code>/g/&lt;t&gt;/midi</code>). Details on the
+  <a href="protocol.html">protocol page</a>.</p>
+
+  <h2>6. Per-note MPE</h2>
+  <p>As shipped, bend, pressure and timbre reach every note a Synth is holding, so an MPE
+  controller's per-finger expression collapses into one value. The voice cards, though, already
+  accept those three messages addressed to a single voice; the stock controller never sends them
+  that way. This project changes the voice controller, and nothing else, so that it does.</p>
+  <figure class="diagram">
+  <pre class="mermaid" data-level="simple">
+flowchart TB
+  MPE(["MPE controller<br/>each finger on its own channel"])
+  ZONE["MPE Synth<br/>listens on every channel"]
+  VA["Voice A<br/>remembers channel 2"]
+  VB["Voice B<br/>remembers channel 3"]
+  OUT[["Each note bends, swells<br/>and brightens on its own"]]
+  MPE -->|"notes, one channel per finger"| ZONE
+  ZONE -->|"first note"| VA
+  ZONE -->|"second note"| VB
+  MPE -.->|"bend, pressure, slide<br/>on channel 2"| VA
+  MPE -.->|"bend, pressure, slide<br/>on channel 3"| VB
+  VA --> OUT
+  VB --> OUT
+  </pre>
+  <pre class="mermaid" data-collapse="NOTE EXPR" data-layout="elk">
+flowchart TB
+  IN(["MIDI in, member channel c"])
+  R{"Router"}
+  subgraph NOTE["Note path"]
+    F["MPE timbre filter<br/>channel compare skipped"]
+    AL["Allocator"]
+    TAG["Voice v<br/>tagged with channel c"]
+  end
+  subgraph EXPR["Expression path"]
+    X["Bend, pressure or CC74<br/>on channel c"]
+    M{"Voices tagged c"}
+    SUP["Timbre-wide messages<br/>dropped for this timbre"]
+  end
+  CARD[["Voice cards"]]
+
+  IN --> R
+  R -->|"note"| F
+  F --> AL
+  AL --> TAG
+  R -->|"expression"| X
+  X --> M
+  X -.->|"/m/pw /m/a /m/xyz"| SUP
+  TAG -.->|"channel tag"| M
+  TAG -->|"/vN/n /vN/nw"| CARD
+  M -->|"/vN/m/pw /vN/m/a /vN/m/pady<br/>to matching voices only"| CARD
+  </pre>
+  <figcaption>The channel a note arrived on is kept with its voice instead of being discarded, and
+  expression on that channel is sent to that voice alone.</figcaption>
+  </figure>
+  <ol>
+    <li>One timbre is designated the MPE zone and accepts notes from every channel.</li>
+    <li>Each allocated voice remembers the channel its note came in on.</li>
+    <li>Bend, pressure and CC74 on a member channel go only to voices tagged with that channel.
+    The card sums them into pitch, amplitude or filter every tick, independent of gate state.</li>
+    <li>The timbre-wide messages for that timbre are dropped, since per-voice and timbre-wide
+    writes land in the same slot and the last writer wins.</li>
+  </ol>
+  <p>All three axes have been verified on one instrument, on one firmware version. The other two
+  timbres behave as shipped.</p>
+  <p>Known boundary: the built-in XY pad still acts on the MPE timbre as a global brightness
+  control, because it arrives by the local path in section 3 and never crosses the point where the
+  timbre-wide messages are dropped.</p>
+</main>
+<footer>
+  Independent project. Not affiliated with, endorsed by, or supported by Moog Music. "Moog" and
+  "Moog One" are trademarks of their owner, used here only to identify the instrument. Observed on
+  system firmware 1.5.0 / voice controller 2.1.2 / voice cards 2.1.0.
+</footer>
+</body>
+</html>

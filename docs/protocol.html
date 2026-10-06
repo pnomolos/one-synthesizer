@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protocol · one-synthesizer</title>
+<meta name="description" content="Internal OSC ports, MIDI-in-OSC encoding, and the binary parameter record format of the Moog One.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="name">one-synthesizer</div>
+  <nav>
+    <a href="index.html">Overview</a>
+    <a href="signal-flow.html">Signal flow</a>
+    <a href="protocol.html" aria-current="page">Protocol</a>
+    <a href="editor.html">Editor</a>
+    <a href="https://github.com/pnomolos/one-synthesizer">GitHub</a>
+  </nav>
+</header>
+<main>
+  <h1>Internal protocol</h1>
+  <p class="lede">OSC 1.0 over UDP between the Linux frontend and the voice controller, on an
+  internal link that is not reachable from the LAN.</p>
+
+  <h2>Ports</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>UDP port</th><th>Listener</th><th>Traffic</th></tr></thead>
+    <tbody>
+      <tr><td>7770</td><td>Voice controller</td><td>Parameter tree. Mostly <code>/x ,b</code> binary records; also plain addresses such as <code>/info/*</code>, <code>/hw/*</code>, and a 1 Hz temperature poll.</td></tr>
+      <tr><td>7771</td><td>Voice controller</td><td>Performance. MIDI-in-OSC from the sequencer/arp, plus per-timbre mod wheel and XYZ.</td></tr>
+      <tr><td>7772</td><td>Frontend</td><td>Note echo from the controller.</td></tr>
+      <tr><td>9100, 9876</td><td>Voice controller</td><td>Panel plane, binary, high rate. Undecoded.</td></tr>
+      <tr><td>9500, 9501, 9600</td><td>Frontend</td><td>Panel state and system clock. 20-byte non-OSC clock packets among them.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>There is no handshake, cookie or session on 7770/7771. The controller accepts a datagram from
+  any source port on the internal link and replies to the sender.</p>
+
+  <h2>MIDI-in-OSC (7771)</h2>
+  <p>The address selects a router; the arguments are the raw MIDI bytes as three int32s.</p>
+  <pre><code>/r/midi ,iii &lt;status&gt; &lt;data1&gt; &lt;data2&gt;
+
+/r/midi ,iii 145 60 100      note-on   ch 2  note 60  vel 100
+/r/midi ,iii 129 60 0        note-off  ch 2
+/r/midi ,iii 225 0 96        pitch bend ch 2 (LSB, MSB)
+/r/midi ,iii 209 80 0        channel pressure ch 2</code></pre>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Address</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>/r/midi</code>, <code>/r/midi-all</code></td><td>Direct MIDI in</td></tr>
+      <tr><td><code>/r/midi-force</code>, <code>/r/midi-force-all</code></td><td>Ignore local/zone gating</td></tr>
+      <tr><td><code>/r/sq/0/midi</code>, <code>/r/sq/0/midi-arp</code></td><td>Sequencer / arp slot 0. This is what the frontend's arp actually emits.</td></tr>
+      <tr><td><code>/g/&lt;t&gt;/midi</code>, <code>/g/&lt;t&gt;/midi-arp</code></td><td>Per-timbre variants, <code>t</code> = 0..2</td></tr>
+      <tr><td><code>/r/g/&lt;t&gt;/m/w</code>, <code>/r/g/&lt;t&gt;/m/xyz</code></td><td>Per-timbre mod wheel and XYZ pad</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Physical MIDI inputs do not use this port; they terminate on the controller. See
+  <a href="signal-flow.html">signal flow</a>.</p>
+
+  <h2>Note echo (7772)</h2>
+  <pre><code>/ ,iifi &lt;tag=4&gt; &lt;note&gt; &lt;velocity/127&gt; &lt;index&gt;</code></pre>
+  <p>Velocity is a float (100 → 0.787402). Note-off is reported as velocity <code>-0.0</code>.
+  <code>index</code> counts up as notes stack and returns to 0 on release.</p>
+
+  <h2>Binary parameter records: <code>/x ,b</code> (7770)</h2>
+  <p>The readable <code>/p/...</code> and <code>/g/...</code> trees are aliases. What the frontend
+  actually streams is one blob of packed little-endian records per datagram.</p>
+  <pre><code>record := type:u8  id:u16le  pad:u8  [value:4 bytes]
+
+type  'f' 0x66   float32
+      'i' 0x69   int32
+      's' 0x73   string, inline, length-padded
+      'T' 0x54   true   (no value)
+      'F' 0x46   false  (no value)
+      '[' 0x5b / ']' 0x5d   array open / close
+
+66 9c 03 00  00 00 00 3f     float id 0x039c = 0.5
+54 76 00 00                  bool  id 0x0076 = true</code></pre>
+  <p>The id encodes the timbre: <code>id = base + 3840 × timbre</code>, timbre 0..2. A blob holds
+  as many records as fit; the frontend never exceeds 1444 bytes of blob (1456-byte datagram), which
+  stays under the link MTU.</p>
+  <p>A full id table (265 base parameters with types, ranges and panel names) will be published
+  with the editor.</p>
+
+  <h2>Reply semantics on 7770</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Reply</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Typed value</td><td>Address exists and is readable</td></tr>
+      <tr><td><code>,ss "404" "Not found"</code></td><td>No such address</td></tr>
+      <tr><td><code>,ss "503" "Unavailable"</code></td><td>Exists, not available in the current mode. All of <code>/v/*</code> and <code>/vx/&lt;n&gt;/*</code> answer this in normal operation.</td></tr>
+      <tr><td>Echo of the datagram</td><td>Anything under <code>/g/</code>. This subtree is a wildcard sink: nonsense addresses echo too, so an echo proves nothing.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>There is no read verb.</strong> A bare address is a query; any argument is a write, even
+    one intended as a placeholder. Sending <code>/mode</code> with an unknown string, then restoring
+    it, hung the controller and with it the network path into the box. Do not write to an address
+    whose effect you cannot verify.
+  </div>
+
+  <h2>Controller to voice card</h2>
+  <p>Each card hosts two voices addressed <code>/v1</code> and <code>/v2</code>; global voice
+  <code>v</code> lives on card <code>v / 2</code>, slot <code>1 + v mod 2</code>.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Address</th><th>Scope</th><th>Sent by stock controller</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>/vN/n</code></td><td>voice</td><td>yes</td><td>Note on</td></tr>
+      <tr><td><code>/vN/nw</code></td><td>voice</td><td>yes</td><td>Gate off</td></tr>
+      <tr><td><code>/vN/p</code></td><td>voice</td><td>yes</td><td>Pitch. Coupled to note state; not safe to re-send mid-note.</td></tr>
+      <tr><td><code>/m/pw</code>, <code>/m/a</code>, <code>/m/xyz</code></td><td>timbre</td><td>yes</td><td>Pitch wheel, aftertouch, pad</td></tr>
+      <tr><td><code>/vN/m/pw ,f</code></td><td>voice</td><td>no</td><td>Pitch wheel, normalised [−1, 1). The card applies the timbre's bend range.</td></tr>
+      <tr><td><code>/vN/m/a</code></td><td>voice</td><td>no</td><td>Aftertouch</td></tr>
+      <tr><td><code>/vN/m/pady</code></td><td>voice</td><td>no</td><td>Pad Y</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The last three are parsed by the stock voice cards and are what per-voice MPE is built on.</p>
+</main>
+<footer>
+  Independent project. Not affiliated with, endorsed by, or supported by Moog Music. "Moog" and
+  "Moog One" are trademarks of their owner, used here only to identify the instrument. Observed on
+  system firmware 1.5.0 / voice controller 2.1.2 / voice cards 2.1.0.
+</footer>
+</body>
+</html>
