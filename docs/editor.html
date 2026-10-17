@@ -16,6 +16,7 @@
     <a href="signal-flow.html">Signal flow</a>
     <a href="protocol.html">Protocol</a>
     <a href="editor.html" aria-current="page">Editor</a>
+    <a href="log.html">Log</a>
     <a href="https://github.com/pnomolos/one-synthesizer">GitHub</a>
   </nav>
 </header>
@@ -46,6 +47,9 @@
     blobs no larger than the instrument's own frontend sends.</li>
     <li><strong>Readback that never writes back.</strong> Changes made on the instrument's panel
     are observed and adopted into the editor without being echoed to the instrument.</li>
+    <li><strong>Compound controls.</strong> Where the panel sends two parameters together, the editor
+    does the same: choosing an LFO's pulse wave co-sends its pulse-width in one message, only on the
+    actual change, so a value you set by hand is not overwritten.</li>
     <li><strong>Librarian.</strong> Capture a preset as it loads on the instrument, save it to a
     file, diff two patches.</li>
   </ul>
@@ -100,6 +104,7 @@ flowchart LR
     <tbody>
       <tr><td>Parameter model, record encoding</td><td><span class="tag ok">DONE</span> tested against captured traffic</td></tr>
       <tr><td>Editable surface, arm gate, batched push</td><td><span class="tag ok">DONE</span> against a mock voice controller</td></tr>
+      <tr><td>Compound controls, companion co-send</td><td><span class="tag ok">DONE</span> one pattern (LFO pulse &rarr; pulse-width) captured on hardware; others inferred</td></tr>
       <tr><td>All wire types on real hardware</td><td><span class="tag wip">PENDING</span></td></tr>
       <tr><td>Safe automation rate</td><td><span class="tag wip">PENDING</span> default held at 50 Hz until measured</td></tr>
       <tr><td>Mod matrix, effects</td><td><span class="tag no">NOT MODELLED</span></td></tr>

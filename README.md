@@ -40,8 +40,12 @@ voice alone. The voice cards are not modified.
 | Track | State |
 |---|---|
 | Per-note MPE (pitch bend, pressure, slide) | All three axes verified on hardware; one unit, one firmware version |
-| Editor / librarian | Software complete against a mock; hardware validation pending |
+| Editor / librarian | Software complete against a mock; compound co-send captured on hardware; full hardware validation pending |
+| Microtuning | Cents verified on hardware by audio analysis; frontend resend shim; one unit, one firmware version |
+| Mod matrix | Destination map resolved and sender verified on hardware; in progress |
 | Protocol docs | Partial; panel plane undecoded |
+
+See the [project log](https://pnomolos.github.io/one-synthesizer/log.html) for dated milestones.
 
 Tested on system firmware 1.5.0, voice controller 2.1.2, voice cards 2.1.0. Source for each track
 will be added as it is cleaned up.

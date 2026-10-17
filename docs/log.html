@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log · one-synthesizer</title>
+<meta name="description" content="Brief project log for the one-synthesizer Moog One interoperability project: dated milestones, newest first.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="name">one-synthesizer</div>
+  <nav>
+    <a href="index.html">Overview</a>
+    <a href="signal-flow.html">Signal flow</a>
+    <a href="protocol.html">Protocol</a>
+    <a href="editor.html">Editor</a>
+    <a href="log.html" aria-current="page">Log</a>
+    <a href="https://github.com/pnomolos/one-synthesizer">GitHub</a>
+  </nav>
+</header>
+<main>
+  <h1>Project log</h1>
+  <p class="lede">One line per milestone, newest first. Behaviour and capability only; dates are when
+  the work landed, on one instrument and one firmware set.</p>
+
+  <div class="table-wrap">
+  <table class="log">
+    <tbody>
+      <tr><td class="date">2026-10-17</td><td>Consolidated the work branches into a single trunk and tidied the repository.</td></tr>
+      <tr><td class="date">2026-10-17</td><td>Editor: compound controls — picking an LFO's pulse wave now co-sends its pulse-width in the same message, matching the front panel.</td></tr>
+      <tr><td class="date">2026-10-16</td><td>Mod matrix: resolved the routing destination map on hardware and added off-device route authoring.</td></tr>
+      <tr><td class="date">2026-10-15</td><td>Mod matrix: hardware-verified sender for modulation routes; microtuning offline test harness.</td></tr>
+      <tr><td class="date">2026-10-11</td><td>Microtuning: cents verified on hardware by audio analysis, with a frontend shim that re-sends the active tuning.</td></tr>
+      <tr><td class="date">2026-10-11</td><td>Hardware-in-the-loop test rig: power-cycle, audio capture and cents check in one run.</td></tr>
+      <tr><td class="date">2026-10-11</td><td>Single-command flash-and-arm wrapper for the per-note MPE firmware.</td></tr>
+      <tr><td class="date">2026-10-06</td><td>Published this site and the public repository.</td></tr>
+      <tr><td class="date">2026-10-03</td><td>Editor: full editable parameter surface, librarian and on-device relay; data path proven on hardware.</td></tr>
+      <tr><td class="date">2026-10-02</td><td>Per-note MPE: slide verified on hardware — all three expression axes now working.</td></tr>
+      <tr><td class="date">2026-10-01</td><td>Per-note MPE: pressure verified on hardware, including an Osmose end-to-end.</td></tr>
+      <tr><td class="date">2026-09-30</td><td>Per-note MPE: gate-safe per-voice bend path and omni MPE-zone firmware.</td></tr>
+      <tr><td class="date">2026-09-29</td><td>First on-device firmware write; assembled the combined per-note MPE image.</td></tr>
+      <tr><td class="date">2026-09-26</td><td>Reverse-engineered the voice-controller image format, proved the patch mechanism offline, and built a recovery harness.</td></tr>
+      <tr><td class="date">2026-09-25</td><td>Project start: MPE research, tooling and shim skeleton.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</main>
+<footer>
+  Independent project. Not affiliated with, endorsed by, or supported by Moog Music. "Moog" and
+  "Moog One" are trademarks of their owner, used here only to identify the instrument.
+</footer>
+</body>
+</html>

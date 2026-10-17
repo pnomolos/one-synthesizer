@@ -15,6 +15,7 @@
     <a href="signal-flow.html">Signal flow</a>
     <a href="protocol.html">Protocol</a>
     <a href="editor.html">Editor</a>
+    <a href="log.html">Log</a>
     <a href="https://github.com/pnomolos/one-synthesizer">GitHub</a>
   </nav>
 </header>
@@ -54,9 +55,25 @@
       <tr>
         <td>Editor / librarian</td>
         <td>Desktop editor for the full parameter surface (265 parameters per timbre) over the
-        binary parameter plane, with a small on-device UDP relay and whitelist.</td>
+        binary parameter plane, with a small on-device UDP relay and whitelist. Compound controls
+        now co-send a companion parameter on the wire the way the panel does &mdash; picking an LFO's
+        pulse wave sends its pulse-width in the same message.</td>
         <td><span class="tag wip">IN PROGRESS</span><br>software complete against a mock;
-        hardware validation pending</td>
+        one compound co-send captured on hardware, full hardware validation pending</td>
+      </tr>
+      <tr>
+        <td>Microtuning</td>
+        <td>Re-enables the instrument's hidden per-note microtuning so alternate scales play in
+        tune, with a frontend shim that re-sends the active tuning when the stock UI would drop it.</td>
+        <td><span class="tag ok">WORKING</span><br>cents verified on hardware by audio analysis;
+        one unit, one firmware version</td>
+      </tr>
+      <tr>
+        <td>Mod matrix</td>
+        <td>Decoded the modulation-matrix routing so routes can be authored off-device and applied,
+        and built a sender for them.</td>
+        <td><span class="tag wip">IN PROGRESS</span><br>destination map resolved and sender verified
+        on hardware</td>
       </tr>
       <tr>
         <td>Protocol documentation</td>

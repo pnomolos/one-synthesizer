@@ -89,3 +89,5 @@ figure.diagram figcaption { color: var(--muted); font-size: 14px; margin-top: 10
 .shot figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 72ch; }
 figure.diagram .render { text-align: center; overflow-x: auto; }
 pre.mermaid[hidden] { display: none; }
+table.log td { vertical-align: top; }
+table.log td.date { font-family: var(--mono); font-size: 13px; color: var(--muted); white-space: nowrap; width: 1%; padding-right: 18px; }
