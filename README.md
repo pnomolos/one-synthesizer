@@ -40,7 +40,7 @@ voice alone. The voice cards are not modified.
 | Track | State |
 |---|---|
 | Per-note MPE (pitch bend, pressure, slide) | All three axes verified on hardware; one unit, one firmware version |
-| Editor / librarian | Software complete against a mock; compound co-send captured on hardware; full hardware validation pending |
+| Editor / librarian | Full parameter surface validated on hardware (every wire type, batched push, compound co-send, panel readback, librarian round-trip); mod matrix and effects not modelled yet |
 | Microtuning | Cents verified on hardware by audio analysis; frontend resend shim; one unit, one firmware version |
 | Mod matrix | Destination map resolved and sender verified on hardware; in progress |
 | Protocol docs | Partial; panel plane undecoded |

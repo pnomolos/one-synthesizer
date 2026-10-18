@@ -104,9 +104,10 @@ flowchart LR
     <tbody>
       <tr><td>Parameter model, record encoding</td><td><span class="tag ok">DONE</span> tested against captured traffic</td></tr>
       <tr><td>Editable surface, arm gate, batched push</td><td><span class="tag ok">DONE</span> against a mock voice controller</td></tr>
-      <tr><td>Compound controls, companion co-send</td><td><span class="tag ok">DONE</span> one pattern (LFO pulse &rarr; pulse-width) captured on hardware; others inferred</td></tr>
-      <tr><td>All wire types on real hardware</td><td><span class="tag wip">PENDING</span></td></tr>
-      <tr><td>Safe automation rate</td><td><span class="tag wip">PENDING</span> default held at 50 Hz until measured</td></tr>
+      <tr><td>Compound controls, companion co-send</td><td><span class="tag ok">DONE</span> both edges (choosing the pulse wave and leaving it) byte-identical to the panel's own capture on hardware</td></tr>
+      <tr><td>All wire types on real hardware</td><td><span class="tag ok">DONE</span> continuous, enumerated and boolean records, per-timbre, verified on the instrument</td></tr>
+      <tr><td>Readback, librarian round-trip</td><td><span class="tag ok">DONE</span> panel edits adopted without write-back; a preset load captured and decoded to full coverage</td></tr>
+      <tr><td>Safe automation rate</td><td><span class="tag ok">DONE</span> burst limit characterised on hardware; default held at 50 Hz</td></tr>
       <tr><td>Mod matrix, effects</td><td><span class="tag no">NOT MODELLED</span></td></tr>
     </tbody>
   </table>
