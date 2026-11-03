@@ -40,9 +40,9 @@ voice alone. The voice cards are not modified.
 | Track | State |
 |---|---|
 | Per-note MPE (pitch bend, pressure, slide) | All three axes verified on hardware; one unit, one firmware version |
-| Editor / librarian | Full parameter surface validated on hardware (every wire type, batched push, compound co-send, panel readback, librarian round-trip); mod matrix and effects not modelled yet |
-| Microtuning | Cents verified on hardware by audio analysis; frontend resend shim; one unit, one firmware version |
-| Mod matrix | Destination map resolved and sender verified on hardware; in progress |
+| Editor / librarian | Full parameter surface and mod-matrix editing validated on hardware (every wire type, batched push, compound co-send, matrix routes applied by the engine, panel readback, librarian round-trip); effects not modelled yet |
+| Microtuning | Cents verified on hardware by audio analysis; frontend resend shim; one unit, one firmware version. Combined MPE + microtuning image verified offline, not yet flashed; fixes a mono/legato re-sound defect in the standalone build |
+| Mod matrix | Destination map, 23 of 35 source codes and squared/cubed transforms verified on hardware or against the instrument's own preset compiler; editable in the editor; remaining sources and the limit transforms still inferred |
 | Protocol docs | Partial; panel plane undecoded |
 
 See the [project log](https://pnomolos.github.io/one-synthesizer/log.html) for dated milestones.

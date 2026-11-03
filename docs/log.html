@@ -27,6 +27,10 @@
   <div class="table-wrap">
   <table class="log">
     <tbody>
+      <tr><td class="date">2026-11-02</td><td>Microtuning + per-note MPE: one voice-controller image carrying both, built and verified offline (differential against the proven MPE build, two review passes). Not yet flashed. The review found a defect in the standalone microtuning build: a still-held note re-sounded by a mono or legato release took the offset of the last note played; the combined build tunes each note by its own pitch.</td></tr>
+      <tr><td class="date">2026-11-01</td><td>Mod matrix: source and transform codes verified on hardware (audio analysis of a route authored from the editor, one source at a time) and against the instrument's own preset compiler. Two corrections to the catalog; a few sources are still inferred, see the status table.</td></tr>
+      <tr><td class="date">2026-11-01</td><td>Editor: mod-matrix write path proven on the instrument end to end &mdash; wire bytes exact, the engine applies the route, readback classified correctly, no write-back.</td></tr>
+      <tr><td class="date">2026-11-01</td><td>Editor: mod-matrix editing &mdash; drag a source onto any destination control, a global matrix pane, per-control popover, mute, undo, librarian support, and readback of matrix edits made on the panel.</td></tr>
       <tr><td class="date">2026-10-18</td><td>Editor: full hardware validation session &mdash; every wire type, batched push, compound co-send (both edges), panel readback without write-back, and a librarian preset round-trip confirmed on the instrument.</td></tr>
       <tr><td class="date">2026-10-17</td><td>Consolidated the work branches into a single trunk and tidied the repository.</td></tr>
       <tr><td class="date">2026-10-17</td><td>Editor: compound controls — picking an LFO's pulse wave now co-sends its pulse-width in the same message, matching the front panel.</td></tr>

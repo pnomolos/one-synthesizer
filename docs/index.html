@@ -56,25 +56,33 @@
         <td>Editor / librarian</td>
         <td>Desktop editor for the full parameter surface (265 parameters per timbre) over the
         binary parameter plane, with a small on-device UDP relay and whitelist. Compound controls
-        now co-send a companion parameter on the wire the way the panel does &mdash; picking an LFO's
-        pulse wave sends its pulse-width in the same message.</td>
-        <td><span class="tag ok">WORKING</span><br>full parameter surface validated on
-        hardware &mdash; every wire type, batched push, compound co-send, panel readback without
-        write-back, and a librarian preset round-trip; mod matrix and effects not modelled yet</td>
+        co-send a companion parameter on the wire the way the panel does. The mod matrix is now
+        editable too: drag a source onto any destination control, or edit routes in a global pane.</td>
+        <td><span class="tag ok">WORKING</span><br>full parameter surface and mod-matrix editing
+        validated on hardware &mdash; every wire type, batched push, compound co-send, matrix
+        routes applied by the engine, panel readback without write-back, and a librarian preset
+        round-trip; effects not modelled yet</td>
       </tr>
       <tr>
         <td>Microtuning</td>
         <td>Re-enables the instrument's hidden per-note microtuning so alternate scales play in
-        tune, with a frontend shim that re-sends the active tuning when the stock UI would drop it.</td>
+        tune, with a frontend shim that re-sends the active tuning when the stock UI would drop it.
+        A combined build carries microtuning and per-note MPE in one voice-controller image.</td>
         <td><span class="tag ok">WORKING</span><br>cents verified on hardware by audio analysis;
-        one unit, one firmware version</td>
+        one unit, one firmware version. Combined MPE + microtuning image verified offline, not yet
+        flashed; it also fixes a re-sound defect found in the standalone microtuning build (a
+        held note re-pitched by a mono or legato release took the previous note's offset)</td>
       </tr>
       <tr>
         <td>Mod matrix</td>
-        <td>Decoded the modulation-matrix routing so routes can be authored off-device and applied,
-        and built a sender for them.</td>
-        <td><span class="tag wip">IN PROGRESS</span><br>destination map resolved and sender verified
-        on hardware</td>
+        <td>Decoded the modulation-matrix routing so routes can be authored off-device and applied.
+        Routes are now edited in the editor and written through the relay as the panel would write
+        them.</td>
+        <td><span class="tag ok">WORKING</span><br>destination map, 23 of 35 source codes and the
+        squared/cubed transforms verified on hardware or against the instrument's own preset
+        compiler; the rest of the sources (CV inputs, pedals, a few internal signals) and the
+        limit transforms are still inferred, and one source the panel calls KEY PITCH is on the
+        wire but its engine behaviour is unresolved</td>
       </tr>
       <tr>
         <td>Protocol documentation</td>

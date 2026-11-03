@@ -38,7 +38,14 @@
   <ul>
     <li><strong>Full parameter surface.</strong> 265 parameters per timbre across oscillators,
     mixer and noise, filters, envelopes, LFOs, sequencer, voice and glide, timbre MIDI and global
-    settings. The mod matrix and effects are not modelled yet.</li>
+    settings. Effects are not modelled yet.</li>
+    <li><strong>Mod matrix.</strong> Drag a source from a strip of modulators onto any control that
+    is a modulation destination to create a route; a ring and badge on the control show what is
+    routed to it, and a popover edits amounts, mutes or removes routes. A global pane shows the
+    whole matrix per timbre, including control and transform columns. Every edit re-sends the
+    timbre's complete matrix, exactly as the panel does, so unknown entries are preserved byte for
+    byte. Matrix edits made on the panel are read back and adopted, and the librarian saves,
+    loads and diffs the matrix alongside the rest of the patch.</li>
     <li><strong>Three timbres.</strong> The Synth 1/2/3 tabs rebind the whole surface; a parameter's
     wire id is its base id plus a fixed per-timbre offset.</li>
     <li><strong>Arm gate.</strong> Nothing reaches the instrument until the session is connected
@@ -92,7 +99,8 @@ flowchart LR
   </pre>
   <figcaption>The voice controller is only reachable on the instrument's internal link, so a small
   relay runs on the instrument. It forwards only well-formed parameter records whose ids and types
-  are in a generated whitelist, and mirrors the built-in frontend's traffic back for readback.</figcaption>
+  are in a generated whitelist, and whole-matrix mod-routing blobs that pass a shape check, and
+  mirrors the built-in frontend's traffic back for readback.</figcaption>
   </figure>
   <p>The relay runs from temporary storage and installs nothing. It can be restricted to datagrams from one
   configured source address.</p>
@@ -108,7 +116,13 @@ flowchart LR
       <tr><td>All wire types on real hardware</td><td><span class="tag ok">DONE</span> continuous, enumerated and boolean records, per-timbre, verified on the instrument</td></tr>
       <tr><td>Readback, librarian round-trip</td><td><span class="tag ok">DONE</span> panel edits adopted without write-back; a preset load captured and decoded to full coverage</td></tr>
       <tr><td>Safe automation rate</td><td><span class="tag ok">DONE</span> burst limit characterised on hardware; default held at 50 Hz</td></tr>
-      <tr><td>Mod matrix, effects</td><td><span class="tag no">NOT MODELLED</span></td></tr>
+      <tr><td>Mod matrix editing</td><td><span class="tag ok">DONE</span> drag-and-drop and pane
+      editing; a route authored in the editor arrives on the instrument byte-exact, the engine
+      applies it (confirmed by audio analysis), and panel edits read back without write-back</td></tr>
+      <tr><td>Mod-matrix source and transform catalog</td><td><span class="tag wip">PARTIAL</span>
+      23 of 35 sources and the squared/cubed transforms verified; CV, pedal and a few internal
+      sources, and the limit transforms, are inferred and shown as such in the UI</td></tr>
+      <tr><td>Effects</td><td><span class="tag no">NOT MODELLED</span></td></tr>
     </tbody>
   </table>
   </div>
